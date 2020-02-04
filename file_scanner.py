@@ -1,4 +1,4 @@
-import os, io, argparse, re, fnmatch, hashlib, sys
+import os, io, argparse, re, fnmatch, hashlib, sys, shutil
 
 # script path
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -21,15 +21,16 @@ def calculate_hash(file):
         print(f"Could not read file for hash: {e}... Exiting.")
         sys.exit(1)
 
-def find_files(dir_path, rex_items):
+def find_files(in_path, out_path, rex_items):
     print(rex_items)
-    for dir_path, sub_dir_list, file_list in os.walk(dir_path):
+    for in_path, sub_dir_list, file_list in os.walk(in_path):
         for file in file_list:
             file_name = os.path.abspath(file)
             #print(file_name)
             if match_rex(file_name, rex_items):
                 file_hash = calculate_hash(file_name)
                 print(f"{file_name} - {file_hash}")
+                shutil.copy(file_name, out_path)
 
 def main():
     # arg parser
@@ -42,12 +43,20 @@ def main():
     # parse the arguments
     args = parser.parse_args()
     # check if there are any regexps
-    if len(args.regexps) == 0:
-        print("You must specify patterns in command line or as a file with -f option.")
-        sys.exit(1)
-
-    find_files(args.src, args.regexps)
-
+    if args.patfile == 'string':
+        if len(args.regexps) == 0:
+            print("You must specify patterns in command line or as a file with -f option.")
+            sys.exit(1)
+        else:
+            find_files(args.src, args.dest, args.regexps)
+    else:
+        try:
+            with open(args.patfile, "r") as p:
+                patterns = p.read().splitlines()
+                find_files(args.src, args.dest, patterns)
+        except Exception as e:
+            print(f"Could not read file for patterns: {e}... Exiting.")
+            sys.exit(1)
 
 if __name__ == "__main__":
     main()
